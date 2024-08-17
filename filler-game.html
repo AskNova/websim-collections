@@ -1,0 +1,446 @@
+<html><head><base href="https://filler.com/game/"><title>Filler</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #e0e5ec;
+  }
+  .game-container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px;
+    border-radius: 20px;
+    background-color: #e0e5ec;
+    box-shadow: 20px 20px 60px #bec3c9, -20px -20px 60px #ffffff;
+  }
+  .board {
+    display: grid;
+    grid-gap: 2px;
+    margin-bottom: 20px;
+    padding: 10px;
+    border-radius: 15px;
+    background-color: #e0e5ec;
+    box-shadow: inset 8px 8px 16px #bec3c9, inset -8px -8px 16px #ffffff;
+  }
+  .cell {
+    width: 50px;
+    height: 50px;
+    border-radius: 0;
+  }
+  .color-picker {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .color-option {
+    width: 40px;
+    height: 40px;
+    margin: 0 10px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 5px 5px 10px #bec3c9, -5px -5px 10px #ffffff;
+  }
+  .color-option:hover:not(.disabled) {
+    transform: scale(1.1);
+  }
+  .color-option.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  #message {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #333;
+  }
+  #scores {
+    font-size: 18px;
+    margin-bottom: 15px;
+    padding: 10px 20px;
+    border-radius: 15px;
+    background-color: #e0e5ec;
+    box-shadow: 5px 5px 10px #bec3c9, -5px -5px 10px #ffffff;
+  }
+  .button {
+    padding: 12px 25px;
+    font-size: 18px;
+    cursor: pointer;
+    color: #333;
+    border: none;
+    border-radius: 15px;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+    background-color: #e0e5ec;
+    box-shadow: 5px 5px 10px #bec3c9, -5px -5px 10px #ffffff;
+  }
+  .button:hover {
+    box-shadow: inset 5px 5px 10px #bec3c9, inset -5px -5px 10px #ffffff;
+  }
+  h1 {
+    color: #333;
+    font-size: 36px;
+    margin-bottom: 20px;
+  }
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(224, 229, 236, 0.8);
+  }
+  .modal-content {
+    background-color: #e0e5ec;
+    margin: 15% auto;
+    padding: 20px;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 20px;
+    box-shadow: 20px 20px 60px #bec3c9, -20px -20px 60px #ffffff;
+  }
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+  .close:hover,
+  .close:focus {
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  #gridSizeControl {
+    margin-top: 10px;
+  }
+  #gridSizeControl label {
+    margin-right: 10px;
+  }
+  #gridSizeControl select {
+    padding: 5px;
+    border-radius: 5px;
+    border: none;
+    background-color: #e0e5ec;
+    box-shadow: inset 2px 2px 5px #bec3c9, inset -2px -2px 5px #ffffff;
+  }
+</style>
+</head>
+<body>
+<div class="game-container">
+  <h1>🎨 Filler ✏️</h1>
+  <div id="scores">Human: 1 | AI: 1</div>
+  <div id="message">Your turn! Pick a color:</div>
+  <div class="color-picker" id="colorPicker"></div>
+  <div class="board" id="gameBoard"></div>
+  <button class="button" id="newGameBtn">New Game</button>
+  <div id="gridSizeControl">
+    <label for="gridSizeSelector">Grid Size:</label>
+    <select id="gridSizeSelector">
+      <option value="7">7x7</option>
+      <option value="8" selected>8x8</option>
+      <option value="9">9x9</option>
+      <option value="10">10x10</option>
+    </select>
+  </div>
+  <button class="button" id="howToPlayBtn">How to Play</button>
+</div>
+
+<div id="howToPlayModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>How to Play Filler</h2>
+    <p>1. Start from the top-left corner and choose a color to fill your area.</p>
+    <p>2. Your goal is to capture more cells than the AI opponent.</p>
+    <p>3. You can only choose colors that are adjacent to your current area.</p>
+    <p>4. The game ends when the entire board is filled.</p>
+    <p>5. The player with the most cells wins!</p>
+  </div>
+</div>
+
+<script>
+const COLORS = [
+  'rgb(255, 20, 147)',
+  'rgb(138, 43, 226)',
+  'rgb(0, 191, 255)',
+  'rgb(50, 205, 50)',
+  'rgb(255, 215, 0)',
+  'rgb(105, 105, 105)'
+];
+let BOARD_SIZE = 8;
+let board = [];
+let aiColor, humanColor;
+
+function initializeBoard() {
+  board = [];
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    board[i] = [];
+    for (let j = 0; j < BOARD_SIZE; j++) {
+      board[i][j] = Math.floor(Math.random() * COLORS.length);
+    }
+  }
+  humanColor = board[0][0];
+  aiColor = board[BOARD_SIZE-1][BOARD_SIZE-1];
+  updateScoreDisplay();
+}
+
+function renderBoard() {
+  const gameBoard = document.getElementById('gameBoard');
+  gameBoard.innerHTML = '';
+  gameBoard.style.gridTemplateColumns = `repeat(${BOARD_SIZE}, 50px)`;
+  
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    for (let j = 0; j < BOARD_SIZE; j++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.backgroundColor = COLORS[board[i][j]];
+      
+      // Apply rounded corners
+      if (i === 0 && j === 0) cell.style.borderTopLeftRadius = '10px';
+      if (i === 0 && j === BOARD_SIZE - 1) cell.style.borderTopRightRadius = '10px';
+      if (i === BOARD_SIZE - 1 && j === 0) cell.style.borderBottomLeftRadius = '10px';
+      if (i === BOARD_SIZE - 1 && j === BOARD_SIZE - 1) cell.style.borderBottomRightRadius = '10px';
+      
+      gameBoard.appendChild(cell);
+    }
+  }
+}
+
+function renderColorPicker() {
+  const colorPicker = document.getElementById('colorPicker');
+  colorPicker.innerHTML = '';
+  COLORS.forEach((color, index) => {
+    const colorOption = document.createElement('div');
+    colorOption.className = 'color-option';
+    colorOption.style.backgroundColor = color;
+    if (index === humanColor || index === aiColor) {
+      colorOption.classList.add('disabled');
+      colorOption.style.opacity = '0.5';
+    } else {
+      colorOption.addEventListener('click', () => makeMove(index));
+    }
+    colorPicker.appendChild(colorOption);
+  });
+}
+
+function floodFill(x, y, oldColor, newColor) {
+  if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE || board[x][y] !== oldColor) return;
+  board[x][y] = newColor;
+  floodFill(x+1, y, oldColor, newColor);
+  floodFill(x-1, y, oldColor, newColor);
+  floodFill(x, y+1, oldColor, newColor);
+  floodFill(x, y-1, oldColor, newColor);
+}
+
+function makeMove(color) {
+  floodFill(0, 0, humanColor, color);
+  humanColor = color;
+  renderBoard();
+  renderColorPicker();
+  updateScoreDisplay();
+  
+  if (!isGameOver()) {
+    document.getElementById('message').textContent = "AI is thinking...";
+    setTimeout(() => {
+      const aiMove = findBestMove();
+      floodFill(BOARD_SIZE-1, BOARD_SIZE-1, aiColor, aiMove);
+      aiColor = aiMove;
+      renderBoard();
+      renderColorPicker();
+      updateScoreDisplay();
+      
+      if (isGameOver()) {
+        announceWinner();
+      } else {
+        document.getElementById('message').textContent = "Your turn! Pick a color:";
+      }
+    }, 500);
+  } else {
+    announceWinner();
+  }
+}
+
+function findBestMove(depth = 3) {
+  let bestScore = -Infinity;
+  let bestMove = null;
+
+  for (let color = 0; color < COLORS.length; color++) {
+    if (color === aiColor || color === humanColor) continue;
+    
+    let newBoard = JSON.parse(JSON.stringify(board));
+    floodFillSimulation(BOARD_SIZE-1, BOARD_SIZE-1, aiColor, color, newBoard);
+    
+    let score = minimax(newBoard, depth - 1, false, -Infinity, Infinity, color, humanColor);
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = color;
+    }
+  }
+
+  return bestMove;
+}
+
+function minimax(simBoard, depth, isMaximizing, alpha, beta, aiColor, humanColor) {
+  if (depth === 0 || isGameOver(simBoard)) {
+    return evaluateBoard(simBoard, aiColor, humanColor);
+  }
+
+  if (isMaximizing) {
+    let maxEval = -Infinity;
+    for (let color = 0; color < COLORS.length; color++) {
+      if (color === aiColor || color === humanColor) continue;
+      let newBoard = JSON.parse(JSON.stringify(simBoard));
+      floodFillSimulation(BOARD_SIZE-1, BOARD_SIZE-1, aiColor, color, newBoard);
+      let eval = minimax(newBoard, depth - 1, false, alpha, beta, color, humanColor);
+      maxEval = Math.max(maxEval, eval);
+      alpha = Math.max(alpha, eval);
+      if (beta <= alpha) break;
+    }
+    return maxEval;
+  } else {
+    let minEval = Infinity;
+    for (let color = 0; color < COLORS.length; color++) {
+      if (color === aiColor || color === humanColor) continue;
+      let newBoard = JSON.parse(JSON.stringify(simBoard));
+      floodFillSimulation(0, 0, humanColor, color, newBoard);
+      let eval = minimax(newBoard, depth - 1, true, alpha, beta, aiColor, color);
+      minEval = Math.min(minEval, eval);
+      beta = Math.min(beta, eval);
+      if (beta <= alpha) break;
+    }
+    return minEval;
+  }
+}
+
+function isGameOver(simBoard = board) {
+  let aiScore = countConnectedCells(BOARD_SIZE-1, BOARD_SIZE-1, aiColor, simBoard);
+  let humanScore = countConnectedCells(0, 0, humanColor, simBoard);
+  return aiScore + humanScore === BOARD_SIZE * BOARD_SIZE;
+}
+
+function evaluateBoard(simBoard, aiColor, humanColor) {
+  let aiScore = countConnectedCells(BOARD_SIZE-1, BOARD_SIZE-1, aiColor, simBoard);
+  let humanScore = countConnectedCells(0, 0, humanColor, simBoard);
+  
+  // Consider control of corners
+  let cornerControl = 0;
+  cornerControl += (simBoard[0][BOARD_SIZE-1] === aiColor) ? 1 : (simBoard[0][BOARD_SIZE-1] === humanColor) ? -1 : 0;
+  cornerControl += (simBoard[BOARD_SIZE-1][0] === aiColor) ? 1 : (simBoard[BOARD_SIZE-1][0] === humanColor) ? -1 : 0;
+  
+  // Consider potential for expansion
+  let aiPotential = countAdjacentCells(simBoard, aiColor);
+  let humanPotential = countAdjacentCells(simBoard, humanColor);
+  
+  return (aiScore - humanScore) * 2 + cornerControl * 5 + (aiPotential - humanPotential);
+}
+
+function countAdjacentCells(simBoard, color) {
+  let count = 0;
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    for (let j = 0; j < BOARD_SIZE; j++) {
+      if (simBoard[i][j] === color) {
+        count += countEmptyNeighbors(simBoard, i, j);
+      }
+    }
+  }
+  return count;
+}
+
+function countEmptyNeighbors(simBoard, x, y) {
+  let count = 0;
+  const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  for (let [dx, dy] of directions) {
+    let nx = x + dx, ny = y + dy;
+    if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && 
+        simBoard[nx][ny] !== aiColor && simBoard[nx][ny] !== humanColor) {
+      count++;
+    }
+  }
+  return count;
+}
+
+function floodFillSimulation(x, y, oldColor, newColor, simBoard) {
+  if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE || simBoard[x][y] !== oldColor) return;
+  simBoard[x][y] = newColor;
+  floodFillSimulation(x+1, y, oldColor, newColor, simBoard);
+  floodFillSimulation(x-1, y, oldColor, newColor, simBoard);
+  floodFillSimulation(x, y+1, oldColor, newColor, simBoard);
+  floodFillSimulation(x, y-1, oldColor, newColor, simBoard);
+}
+
+function countConnectedCells(x, y, color, simBoard = board) {
+  let count = 0;
+  let visited = new Array(BOARD_SIZE).fill(0).map(() => new Array(BOARD_SIZE).fill(false));
+  
+  function dfs(i, j) {
+    if (i < 0 || i >= BOARD_SIZE || j < 0 || j >= BOARD_SIZE || visited[i][j] || simBoard[i][j] !== color) return;
+    visited[i][j] = true;
+    count++;
+    dfs(i+1, j);
+    dfs(i-1, j);
+    dfs(i, j+1);
+    dfs(i, j-1);
+  }
+  
+  dfs(x, y);
+  return count;
+}
+
+function updateScoreDisplay() {
+  const humanScore = countConnectedCells(0, 0, humanColor);
+  const aiScore = countConnectedCells(BOARD_SIZE-1, BOARD_SIZE-1, aiColor);
+  document.getElementById('scores').textContent = `Human: ${humanScore} | AI: ${aiScore}`;
+}
+
+function announceWinner() {
+  const humanScore = countConnectedCells(0, 0, humanColor);
+  const aiScore = countConnectedCells(BOARD_SIZE-1, BOARD_SIZE-1, aiColor);
+  let message = humanScore > aiScore ? "You win!" : humanScore < aiScore ? "AI wins!" : "It's a tie!";
+  message += ` (You: ${humanScore}, AI: ${aiScore})`;
+  document.getElementById('message').textContent = message;
+}
+
+function newGame() {
+  BOARD_SIZE = parseInt(document.getElementById('gridSizeSelector').value);
+  initializeBoard();
+  renderBoard();
+  renderColorPicker();
+  document.getElementById('message').textContent = "Your turn! Pick a color:";
+}
+
+document.getElementById('newGameBtn').addEventListener('click', newGame);
+document.getElementById('gridSizeSelector').addEventListener('change', newGame);
+
+const modal = document.getElementById("howToPlayModal");
+const btn = document.getElementById("howToPlayBtn");
+const span = document.getElementsByClassName("close")[0];
+
+btn.onclick = function() {
+  modal.style.display = "block";
+}
+
+span.onclick = function() {
+  modal.style.display = "none";
+}
+
+window.onclick = function(event) {
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+
+newGame();
+</script>
+</body></html>
